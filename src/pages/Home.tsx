@@ -6,6 +6,9 @@ import {
   Gamepad2,
   Layers,
   Shield,
+  Grid2X2,
+  CircleDot,
+  Box
 } from 'lucide-react'
 
 import { useNavigate } from 'react-router-dom'
@@ -29,8 +32,23 @@ function Home() {
     navigate('/flappy')
   }
 
+  const open2048Game = () => {
+    navigate('/2048')
+  }
+
+  const openSnakeGame = () => {
+    navigate('/snake')
+  }
+
+  const openTetrisGame = () => navigate('/tetris')
+
+  
+
   return (
-    <main className="min-h-screen bg-[#08090D] text-white">
+    <main
+      dir="rtl"
+      className="min-h-screen bg-[#08090D] text-white"
+    >
       <div className="mx-auto min-h-screen max-w-5xl px-4 py-6 sm:px-5 sm:py-8">
 
         {/* Header */}
@@ -71,12 +89,6 @@ function Home() {
 
             <div className="relative">
 
-              {/* Badge */}
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-400">
-                <Gamepad2 size={14} />
-                ۴ بازی آماده است
-              </div>
-
               {/* Title */}
               <h2 className="max-w-2xl text-4xl font-black leading-tight sm:text-5xl">
                 رکوردت رو
@@ -89,21 +101,6 @@ function Home() {
                 بازی‌های سریع و ساده برای اینکه رکورد خودت رو بشکنی
                 و ببینی چقدر می‌تونی بهتر بشی.
               </p>
-
-              {/* Play button */}
-              <button
-                onClick={openReflexGame}
-                className="mt-7 flex items-center gap-2 rounded-2xl bg-white px-6 py-4 font-bold text-black"
-              >
-                <Play
-                  size={18}
-                  fill="currentColor"
-                />
-
-                بازی رفلکس
-
-                <ArrowLeft size={18} />
-              </button>
 
             </div>
 
@@ -127,10 +124,6 @@ function Home() {
               </p>
             </div>
 
-            <span className="text-xs text-zinc-600">
-              ۴ بازی
-            </span>
-
           </div>
 
           {/* Game cards */}
@@ -139,7 +132,7 @@ function Home() {
             {/* Reflex */}
             <button
               onClick={openReflexGame}
-              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right hover:border-white/20 hover:bg-white/[0.07]"
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right transition hover:border-white/20 hover:bg-white/[0.07]"
             >
 
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
@@ -173,7 +166,7 @@ function Home() {
             {/* Stack */}
             <button
               onClick={openStackGame}
-              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right hover:border-white/20 hover:bg-white/[0.07]"
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right transition hover:border-white/20 hover:bg-white/[0.07]"
             >
 
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
@@ -206,7 +199,7 @@ function Home() {
             {/* Dodge */}
             <button
               onClick={openDodgeGame}
-              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right hover:border-white/20 hover:bg-white/[0.07]"
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right transition hover:border-white/20 hover:bg-white/[0.07]"
             >
 
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
@@ -239,12 +232,13 @@ function Home() {
             {/* Flappy Bird */}
             <button
               onClick={openFlappyGame}
-              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right hover:border-white/20 hover:bg-white/[0.07]"
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right transition hover:border-white/20 hover:bg-white/[0.07]"
             >
 
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
 
                 <div className="relative h-7 w-7">
+
                   <div className="absolute left-1 top-1 h-5 w-5 rounded-[7px] bg-white" />
 
                   <div className="absolute left-5 top-2 h-1.5 w-2.5 rounded-full bg-zinc-400" />
@@ -252,6 +246,7 @@ function Home() {
                   <div className="absolute left-5 top-0.5 h-1.5 w-1.5 rounded-full bg-black" />
 
                   <div className="absolute left-0 top-4 h-2 w-3 rounded-full bg-zinc-300" />
+
                 </div>
 
               </div>
@@ -273,6 +268,104 @@ function Home() {
 
                 <p className="mt-1 text-xs leading-5 text-zinc-500">
                   پرواز کن، از لوله‌ها رد شو و رکوردت رو بشکن.
+                </p>
+
+              </div>
+
+            </button>
+
+            {/* 2048 */}
+            <button
+              onClick={open2048Game}
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right transition hover:border-white/20 hover:bg-white/[0.07]"
+            >
+
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/[0.15]">
+                <Grid2X2 size={27} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+
+                <div className="flex items-center justify-between gap-3">
+
+                  <h4 className="font-bold">
+                    ۲۰۴۸
+                  </h4>
+
+                  <ArrowLeft
+                    size={17}
+                    className="text-zinc-600 transition group-hover:-translate-x-1 group-hover:text-white"
+                  />
+
+                </div>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  عددها رو ترکیب کن، به ۲۰۴۸ برس و رکوردت رو بشکن.
+                </p>
+
+              </div>
+
+            </button>
+
+            {/* Snake */}
+            <button
+              onClick={openSnakeGame}
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right transition hover:border-white/20 hover:bg-white/[0.07]"
+            >
+
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
+                <CircleDot size={27} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+
+                <div className="flex items-center justify-between gap-3">
+
+                  <h4 className="font-bold">
+                    مار
+                  </h4>
+
+                  <ArrowLeft
+                    size={17}
+                    className="text-zinc-600 transition group-hover:-translate-x-1 group-hover:text-white"
+                  />
+
+                </div>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  غذاها رو بخور، بزرگ‌تر شو و رکوردت رو بشکن.
+                </p>
+
+              </div>
+
+            </button>
+
+            {/* Tetris */}
+            <button
+              onClick={openTetrisGame}
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right transition hover:border-white/20 hover:bg-white/[0.07]"
+            >
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
+                <Box size={27} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+
+                <div className="flex items-center justify-between gap-3">
+
+                  <h4 className="font-bold">
+                    تتریس
+                  </h4>
+
+                  <ArrowLeft
+                    size={17}
+                    className="text-zinc-600 transition group-hover:-translate-x-1 group-hover:text-white"
+                  />
+
+                </div>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  بلوک‌ها رو بچین، خط‌ها رو پاک کن و رکوردت رو بشکن.
                 </p>
 
               </div>
