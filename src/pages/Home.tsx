@@ -1,10 +1,11 @@
-
 import {
   ArrowLeft,
   Heart,
   Play,
   Target,
   Gamepad2,
+  Layers,
+  Shield,
 } from 'lucide-react'
 
 import { useNavigate } from 'react-router-dom'
@@ -14,6 +15,18 @@ function Home() {
 
   const openReflexGame = () => {
     navigate('/reflex')
+  }
+
+  const openStackGame = () => {
+    navigate('/stack')
+  }
+
+  const openDodgeGame = () => {
+    navigate('/dodge')
+  }
+
+  const openFlappyGame = () => {
+    navigate('/flappy')
   }
 
   return (
@@ -60,13 +73,13 @@ function Home() {
 
               {/* Badge */}
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-zinc-400">
-                <Target size={14} />
-                اولین بازی آماده است
+                <Gamepad2 size={14} />
+                ۴ بازی آماده است
               </div>
 
               {/* Title */}
               <h2 className="max-w-2xl text-4xl font-black leading-tight sm:text-5xl">
-                سرعتت رو
+                رکوردت رو
                 <br />
                 به چالش بکش.
               </h2>
@@ -80,7 +93,7 @@ function Home() {
               {/* Play button */}
               <button
                 onClick={openReflexGame}
-                className="mt-7 flex items-center gap-2 rounded-2xl bg-white px-6 py-4 font-bold text-black transition hover:scale-[1.02] active:scale-[0.98]"
+                className="mt-7 flex items-center gap-2 rounded-2xl bg-white px-6 py-4 font-bold text-black"
               >
                 <Play
                   size={18}
@@ -115,7 +128,7 @@ function Home() {
             </div>
 
             <span className="text-xs text-zinc-600">
-              ۱ بازی
+              ۴ بازی
             </span>
 
           </div>
@@ -126,15 +139,13 @@ function Home() {
             {/* Reflex */}
             <button
               onClick={openReflexGame}
-              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right transition hover:border-white/20 hover:bg-white/[0.07]"
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right hover:border-white/20 hover:bg-white/[0.07]"
             >
 
-              {/* Icon */}
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
                 <Target size={27} />
               </div>
 
-              {/* Content */}
               <div className="min-w-0 flex-1">
 
                 <div className="flex items-center justify-between gap-3">
@@ -159,26 +170,114 @@ function Home() {
 
             </button>
 
-            {/* Coming Soon */}
-            <div className="flex items-center gap-4 rounded-[1.5rem] border border-white/5 bg-white/[0.02] p-5 opacity-50">
+            {/* Stack */}
+            <button
+              onClick={openStackGame}
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right hover:border-white/20 hover:bg-white/[0.07]"
+            >
 
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/5">
-                <Gamepad2 size={27} />
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
+                <Layers size={27} />
               </div>
 
-              <div>
+              <div className="min-w-0 flex-1">
 
-                <h4 className="font-bold">
-                  بازی بعدی
-                </h4>
+                <div className="flex items-center justify-between gap-3">
 
-                <p className="mt-1 text-xs text-zinc-600">
-                  به‌زودی
+                  <h4 className="font-bold">
+                    برج‌سازی
+                  </h4>
+
+                  <ArrowLeft
+                    size={17}
+                    className="text-zinc-600 transition group-hover:-translate-x-1 group-hover:text-white"
+                  />
+
+                </div>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  بلوک‌ها رو روی هم بچین و بلندترین برج رو بساز.
                 </p>
 
               </div>
 
-            </div>
+            </button>
+
+            {/* Dodge */}
+            <button
+              onClick={openDodgeGame}
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right hover:border-white/20 hover:bg-white/[0.07]"
+            >
+
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
+                <Shield size={27} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+
+                <div className="flex items-center justify-between gap-3">
+
+                  <h4 className="font-bold">
+                    فرار کن
+                  </h4>
+
+                  <ArrowLeft
+                    size={17}
+                    className="text-zinc-600 transition group-hover:-translate-x-1 group-hover:text-white"
+                  />
+
+                </div>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  از دشمن‌ها فرار کن و تا جای ممکن زنده بمون.
+                </p>
+
+              </div>
+
+            </button>
+
+            {/* Flappy Bird */}
+            <button
+              onClick={openFlappyGame}
+              className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right hover:border-white/20 hover:bg-white/[0.07]"
+            >
+
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
+
+                <div className="relative h-7 w-7">
+                  <div className="absolute left-1 top-1 h-5 w-5 rounded-[7px] bg-white" />
+
+                  <div className="absolute left-5 top-2 h-1.5 w-2.5 rounded-full bg-zinc-400" />
+
+                  <div className="absolute left-5 top-0.5 h-1.5 w-1.5 rounded-full bg-black" />
+
+                  <div className="absolute left-0 top-4 h-2 w-3 rounded-full bg-zinc-300" />
+                </div>
+
+              </div>
+
+              <div className="min-w-0 flex-1">
+
+                <div className="flex items-center justify-between gap-3">
+
+                  <h4 className="font-bold">
+                    فلاپی برد
+                  </h4>
+
+                  <ArrowLeft
+                    size={17}
+                    className="text-zinc-600 transition group-hover:-translate-x-1 group-hover:text-white"
+                  />
+
+                </div>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  پرواز کن، از لوله‌ها رد شو و رکوردت رو بشکن.
+                </p>
+
+              </div>
+
+            </button>
 
           </div>
 
@@ -191,12 +290,10 @@ function Home() {
 
             <div className="flex items-start gap-4">
 
-              {/* Icon */}
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/5">
                 <Heart size={20} />
               </div>
 
-              {/* Content */}
               <div className="flex-1">
 
                 <h3 className="font-bold">
@@ -231,4 +328,3 @@ function Home() {
 }
 
 export default Home
-
