@@ -1,20 +1,39 @@
+import { useEffect, useState } from 'react'
+
 import {
   ArrowLeft,
   Heart,
-  Play,
   Target,
   Gamepad2,
   Layers,
   Shield,
   Grid2X2,
   CircleDot,
-  Box
+  Box,
+  X
 } from 'lucide-react'
 
 import { useNavigate } from 'react-router-dom'
 
+type User = {
+  id: number
+  username: string
+}
+
+const DEVICE_TOKEN_KEY = 'reflex-games-device-token'
+
 function Home() {
   const navigate = useNavigate()
+
+  const [user, setUser] = useState<User | null>(null)
+  const [loadingUser, setLoadingUser] = useState(true)
+
+  const [showUsernameModal, setShowUsernameModal] = useState(false)
+  const [newUsername, setNewUsername] = useState('')
+  const [savingUsername, setSavingUsername] = useState(false)
+  const [usernameError, setUsernameError] = useState('')
+
+  const apiUrl = import.meta.env.VITE_API_URL
 
   const openReflexGame = () => {
     navigate('/reflex')
@@ -40,9 +59,207 @@ function Home() {
     navigate('/snake')
   }
 
-  const openTetrisGame = () => navigate('/tetris')
+  const openTetrisGame = () => {
+    navigate('/tetris')
+  }
 
-  
+  /*
+  |--------------------------------------------------------------------------
+  | Open username modal
+  |--------------------------------------------------------------------------
+  */
+
+  const openUsernameModal = () => {
+    if (!user) return
+
+    setNewUsername(user.username)
+    setUsernameError('')
+    setShowUsernameModal(true)
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Close username modal
+  |--------------------------------------------------------------------------
+  */
+
+  const closeUsernameModal = () => {
+    if (savingUsername) return
+
+    setShowUsernameModal(false)
+    setUsernameError('')
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Load / create user
+  |--------------------------------------------------------------------------
+  */
+
+  useEffect(() => {
+    const initializeUser = async () => {
+      try {
+        let deviceToken = localStorage.getItem(
+          DEVICE_TOKEN_KEY
+        )
+
+        if (!deviceToken) {
+          deviceToken = crypto.randomUUID()
+
+          localStorage.setItem(
+            DEVICE_TOKEN_KEY,
+            deviceToken
+          )
+        }
+
+        const response = await fetch(
+          `${apiUrl}/index.php?route=user`,
+          {
+            method: 'POST',
+
+            headers: {
+              'Content-Type': 'application/json'
+            },
+
+            body: JSON.stringify({
+              device_token: deviceToken
+            })
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error(
+            `API request failed: ${response.status}`
+          )
+        }
+
+        const data = await response.json()
+
+        if (!data.success || !data.user) {
+          throw new Error(
+            data.message || 'Failed to load user.'
+          )
+        }
+
+        setUser(data.user)
+
+      } catch (error) {
+        console.error(
+          'Failed to initialize user:',
+          error
+        )
+      } finally {
+        setLoadingUser(false)
+      }
+    }
+
+    initializeUser()
+  }, [apiUrl])
+
+  /*
+  |--------------------------------------------------------------------------
+  | Save username
+  |--------------------------------------------------------------------------
+  */
+
+  const saveUsername = async () => {
+    if (!user) return
+
+    const username = newUsername.trim()
+
+    /*
+    |--------------------------------------------------------------------------
+    | Client-side validation
+    |--------------------------------------------------------------------------
+    */
+
+    if (username.length < 2) {
+      setUsernameError(
+        'نام کاربری باید حداقل ۲ کاراکتر باشد.'
+      )
+
+      return
+    }
+
+    if (username.length > 32) {
+      setUsernameError(
+        'نام کاربری نمی‌تواند بیشتر از ۳۲ کاراکتر باشد.'
+      )
+
+      return
+    }
+
+    try {
+      setSavingUsername(true)
+      setUsernameError('')
+
+      const deviceToken = localStorage.getItem(
+        DEVICE_TOKEN_KEY
+      )
+
+      if (!deviceToken) {
+        throw new Error(
+          'Device token not found.'
+        )
+      }
+
+      const response = await fetch(
+        `${apiUrl}/index.php?route=username`,
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json'
+          },
+
+          body: JSON.stringify({
+            device_token: deviceToken,
+            username
+          })
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message ||
+          'Failed to update username.'
+        )
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | Update local user
+      |--------------------------------------------------------------------------
+      */
+
+      setUser(data.user)
+
+      /*
+      |--------------------------------------------------------------------------
+      | Close modal
+      |--------------------------------------------------------------------------
+      */
+
+      setShowUsernameModal(false)
+
+    } catch (error) {
+      console.error(
+        'Failed to update username:',
+        error
+      )
+
+      setUsernameError(
+        error instanceof Error
+          ? error.message
+          : 'خطایی رخ داد.'
+      )
+
+    } finally {
+      setSavingUsername(false)
+    }
+  }
 
   return (
     <main
@@ -74,6 +291,18 @@ function Home() {
             </div>
 
           </div>
+
+          {/* User */}
+          <button
+            type="button"
+            onClick={openUsernameModal}
+            disabled={loadingUser || !user}
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold transition hover:border-white/20 hover:bg-white/[0.07] disabled:cursor-default disabled:opacity-60"
+          >
+            {loadingUser
+              ? 'در حال بارگذاری...'
+              : user?.username ?? 'Player'}
+          </button>
 
         </header>
 
@@ -345,6 +574,7 @@ function Home() {
               onClick={openTetrisGame}
               className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-right transition hover:border-white/20 hover:bg-white/[0.07]"
             >
+
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 transition group-hover:bg-white/15">
                 <Box size={27} />
               </div>
@@ -416,6 +646,139 @@ function Home() {
         </footer>
 
       </div>
+
+      {/* Username Modal */}
+      {showUsernameModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeUsernameModal()
+            }
+          }}
+        >
+
+          <div
+            dir="rtl"
+            className="w-full max-w-md rounded-[1.5rem] border border-white/10 bg-[#111217] p-6 shadow-2xl"
+          >
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <h3 className="text-lg font-black">
+                  تغییر نام کاربری
+                </h3>
+
+                <p className="mt-1 text-xs text-zinc-500">
+                  نامی که بقیه بازیکن‌ها می‌بینند.
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={closeUsernameModal}
+                disabled={savingUsername}
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+
+            </div>
+
+            {/* Input */}
+            <div className="mt-6">
+
+              <label
+                htmlFor="username"
+                className="mb-2 block text-xs font-bold text-zinc-400"
+              >
+                نام کاربری
+              </label>
+
+              <input
+                id="username"
+                type="text"
+                value={newUsername}
+                onChange={(event) => {
+                  setNewUsername(event.target.value)
+                  setUsernameError('')
+                }}
+                onKeyDown={(event) => {
+
+                  if (event.key === 'Enter') {
+                    saveUsername()
+                  }
+
+                  if (event.key === 'Escape') {
+                    closeUsernameModal()
+                  }
+
+                }}
+                maxLength={32}
+                autoFocus
+                disabled={savingUsername}
+                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-700 focus:border-white/25 focus:bg-white/[0.06] disabled:opacity-50"
+                placeholder="نام کاربری"
+              />
+
+              <div className="mt-2 flex items-center justify-between">
+
+                <span className="text-[11px] text-zinc-600">
+                  ۲ تا ۳۲ کاراکتر
+                </span>
+
+                <span className="text-[11px] text-zinc-600">
+                  {newUsername.length}/32
+                </span>
+
+              </div>
+
+              {/* Error */}
+              {usernameError && (
+                <p className="mt-3 text-xs text-red-400">
+                  {usernameError}
+                </p>
+              )}
+
+            </div>
+
+            {/* Buttons */}
+            <div className="mt-6 flex gap-3">
+
+              <button
+                type="button"
+                onClick={closeUsernameModal}
+                disabled={savingUsername}
+                className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-zinc-400 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50"
+              >
+                انصراف
+              </button>
+
+              <button
+                type="button"
+                onClick={saveUsername}
+                disabled={
+                  savingUsername ||
+                  newUsername.trim().length < 2
+                }
+                className="flex-1 rounded-xl bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {savingUsername
+                  ? 'در حال ذخیره...'
+                  : 'ذخیره'}
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
     </main>
   )
 }

@@ -12,6 +12,25 @@ type Block = {
   width: number
 }
 
+type LeaderboardPlayer = {
+  id: number
+  username: string
+  score: number
+  position: number
+  is_me: boolean
+}
+
+type ScoreResult = {
+  success: boolean
+  game: string
+  score: number
+  record: number
+  is_new_record: boolean
+  position: number
+  players: LeaderboardPlayer[]
+  message?: string
+}
+
 const GAME_WIDTH = 800
 const BLOCK_HEIGHT = 42
 
@@ -21,6 +40,9 @@ const INITIAL_X =
   (GAME_WIDTH - INITIAL_BLOCK_WIDTH) / 2
 
 const BLOCK_GAP = 3
+
+const DEVICE_TOKEN_KEY =
+  'reflex-games-device-token'
 
 function StackGame() {
   const navigate = useNavigate()
@@ -72,6 +94,112 @@ function StackGame() {
 
   const [isNewBest, setIsNewBest] =
     useState(false)
+
+  const [scoreResult, setScoreResult] =
+    useState<ScoreResult | null>(null)
+
+  const [isSubmitting, setIsSubmitting] =
+    useState(false)
+
+  const [submitError, setSubmitError] =
+    useState<string | null>(null)
+
+  /*
+   * API URL
+   */
+  const apiUrl =
+    import.meta.env.VITE_API_URL
+
+  /*
+   * Get or create device token
+   */
+  const getDeviceToken = () => {
+    let token =
+      localStorage.getItem(
+        DEVICE_TOKEN_KEY
+      )
+
+    if (!token) {
+      token =
+        crypto.randomUUID()
+
+      localStorage.setItem(
+        DEVICE_TOKEN_KEY,
+        token
+      )
+    }
+
+    return token
+  }
+
+  /*
+   * Submit score
+   */
+  const submitScore = async (
+    finalScore: number
+  ) => {
+    try {
+      setIsSubmitting(true)
+      setSubmitError(null)
+      setScoreResult(null)
+
+      const deviceToken =
+        getDeviceToken()
+
+      const response =
+        await fetch(
+          `${apiUrl}/index.php?route=score`,
+          {
+            method: 'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+
+            body: JSON.stringify({
+              game: 'stack',
+              device_token:
+                deviceToken,
+              score: finalScore,
+            }),
+          }
+        )
+
+      const data =
+        await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message ||
+            'ثبت امتیاز ناموفق بود.'
+        )
+      }
+
+      setScoreResult(data)
+
+      setBestScore(
+        data.record
+      )
+
+      setIsNewBest(
+        data.is_new_record
+      )
+    } catch (error) {
+      console.error(
+        'Score submission error:',
+        error
+      )
+
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : 'خطا در ثبت امتیاز.'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   /*
    * Sounds
@@ -161,6 +289,12 @@ function StackGame() {
 
     setIsNewBest(false)
 
+    setScoreResult(null)
+
+    setSubmitError(null)
+
+    setIsSubmitting(false)
+
     setCameraOffset(0)
 
     setBlocks([
@@ -186,7 +320,7 @@ function StackGame() {
    * Moving block
    *
    * This is the ONLY continuous
-   * game animation now.
+   * game animation.
    */
   useEffect(() => {
     if (!gameStarted || gameOver) {
@@ -196,7 +330,8 @@ function StackGame() {
     const animate = () => {
       setCurrentBlock((block) => {
         const maxX =
-          GAME_WIDTH - block.width
+          GAME_WIDTH -
+          block.width
 
         let nextX =
           block.x +
@@ -208,6 +343,7 @@ function StackGame() {
          */
         if (nextX <= 0) {
           nextX = 0
+
           directionRef.current = 1
         }
 
@@ -216,6 +352,7 @@ function StackGame() {
          */
         if (nextX >= maxX) {
           nextX = maxX
+
           directionRef.current = -1
         }
 
@@ -226,11 +363,15 @@ function StackGame() {
       })
 
       movementAnimationRef.current =
-        requestAnimationFrame(animate)
+        requestAnimationFrame(
+          animate
+        )
     }
 
     movementAnimationRef.current =
-      requestAnimationFrame(animate)
+      requestAnimationFrame(
+        animate
+      )
 
     return () => {
       if (movementAnimationRef.current) {
@@ -273,7 +414,8 @@ function StackGame() {
       currentTime: number
     ) => {
       const elapsed =
-        currentTime - startTime
+        currentTime -
+        startTime
 
       const progress =
         Math.min(
@@ -282,7 +424,7 @@ function StackGame() {
         )
 
       /*
-       * Ease-out.
+       * Ease-out
        */
       const eased =
         1 -
@@ -312,7 +454,9 @@ function StackGame() {
     }
 
     cameraAnimationRef.current =
-      requestAnimationFrame(animate)
+      requestAnimationFrame(
+        animate
+      )
   }
 
   /*
@@ -379,16 +523,10 @@ function StackGame() {
 
       playGameOverSound()
 
-      setBestScore((currentBest) => {
-        if (score > currentBest) {
-          setIsNewBest(true)
-        }
-
-        return Math.max(
-          currentBest,
-          score
-        )
-      })
+      /*
+       * Submit final score
+       */
+      submitScore(score)
 
       return
     }
@@ -409,10 +547,12 @@ function StackGame() {
     /*
      * Add the new block immediately.
      */
-    setBlocks((currentBlocks) => [
-      ...currentBlocks,
-      newBlock,
-    ])
+    setBlocks(
+      (currentBlocks) => [
+        ...currentBlocks,
+        newBlock,
+      ]
+    )
 
     setScore(newScore)
 
@@ -422,7 +562,8 @@ function StackGame() {
     const newSpeed =
       Math.min(
         9,
-        speedRef.current + 0.18
+        speedRef.current +
+          0.18
       )
 
     speedRef.current =
@@ -481,7 +622,8 @@ function StackGame() {
           : GAME_WIDTH -
             overlapWidth,
 
-      width: overlapWidth,
+      width:
+        overlapWidth,
     })
   }
 
@@ -501,7 +643,9 @@ function StackGame() {
         <header className="mb-5 flex items-center gap-3">
 
           <button
-            onClick={() => navigate('/')}
+            onClick={() =>
+              navigate('/')
+            }
             className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
           >
             <ArrowRight size={20} />
@@ -520,64 +664,71 @@ function StackGame() {
         </header>
 
         {/* Start Screen */}
-        {!isPlaying && !gameOver && (
-          <section className="flex flex-1 items-center justify-center">
+        {!isPlaying &&
+          !gameOver && (
+            <section className="flex flex-1 items-center justify-center">
 
-            <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 text-center shadow-2xl sm:p-9">
+              <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 text-center shadow-2xl sm:p-9">
 
-              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-white/10">
-                <Layers
-                  size={40}
-                  strokeWidth={1.7}
-                />
-              </div>
+                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-white/10">
 
-              <h2 className="text-3xl font-black">
-                برجت رو بساز
-              </h2>
+                  <Layers
+                    size={40}
+                    strokeWidth={1.7}
+                  />
 
-              <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-zinc-400">
-                بلوک متحرک رو در زمان مناسب بنداز
-                و برجت رو بلندتر کن.
-                اگه بیرون از بلوک قبلی فرود بیاد،
-                بازی تمومه.
-              </p>
-
-              <div className="mt-7 grid grid-cols-2 gap-2">
-
-                <div className="rounded-2xl bg-white/5 p-3">
-                  <p className="text-xs text-zinc-500">
-                    هدف
-                  </p>
-
-                  <p className="mt-1 font-bold">
-                    ساختن برج
-                  </p>
                 </div>
 
-                <div className="rounded-2xl bg-white/5 p-3">
-                  <p className="text-xs text-zinc-500">
-                    اشتباه
-                  </p>
+                <h2 className="text-3xl font-black">
+                  برجت رو بساز
+                </h2>
 
-                  <p className="mt-1 font-bold">
-                    پایان بازی
-                  </p>
+                <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-zinc-400">
+                  بلوک متحرک رو در زمان مناسب بنداز
+                  و برجت رو بلندتر کن.
+                  اگه بیرون از بلوک قبلی فرود بیاد،
+                  بازی تمومه.
+                </p>
+
+                <div className="mt-7 grid grid-cols-2 gap-2">
+
+                  <div className="rounded-2xl bg-white/5 p-3">
+
+                    <p className="text-xs text-zinc-500">
+                      هدف
+                    </p>
+
+                    <p className="mt-1 font-bold">
+                      ساختن برج
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-2xl bg-white/5 p-3">
+
+                    <p className="text-xs text-zinc-500">
+                      اشتباه
+                    </p>
+
+                    <p className="mt-1 font-bold">
+                      پایان بازی
+                    </p>
+
+                  </div>
+
                 </div>
+
+                <button
+                  onClick={startGame}
+                  className="mt-7 w-full rounded-2xl bg-white px-5 py-4 font-bold text-black"
+                >
+                  شروع بازی
+                </button>
 
               </div>
 
-              <button
-                onClick={startGame}
-                className="mt-7 w-full rounded-2xl bg-white px-5 py-4 font-bold text-black"
-              >
-                شروع بازی
-              </button>
-
-            </div>
-
-          </section>
-        )}
+            </section>
+          )}
 
         {/* Game */}
         {isPlaying && (
@@ -587,6 +738,7 @@ function StackGame() {
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center sm:p-4">
+
                 <p className="text-xs text-zinc-500">
                   طبقه
                 </p>
@@ -594,9 +746,11 @@ function StackGame() {
                 <p className="mt-1 text-xl font-black sm:text-2xl">
                   {score}
                 </p>
+
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center sm:p-4">
+
                 <p className="text-xs text-zinc-500">
                   عرض بلوک
                 </p>
@@ -606,9 +760,11 @@ function StackGame() {
                     currentBlock.width
                   )}
                 </p>
+
               </div>
 
               <div className="hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center sm:block sm:p-4">
+
                 <p className="text-xs text-zinc-500">
                   رکورد
                 </p>
@@ -616,6 +772,7 @@ function StackGame() {
                 <p className="mt-1 text-xl font-black sm:text-2xl">
                   {bestScore}
                 </p>
+
               </div>
 
             </div>
@@ -623,7 +780,9 @@ function StackGame() {
             {/* Game Area */}
             <div
               ref={gameAreaRef}
-              onClick={handleGameAreaClick}
+              onClick={
+                handleGameAreaClick
+              }
               className="relative min-h-[500px] flex-1 cursor-pointer overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.025] shadow-inner sm:min-h-[600px]"
             >
 
@@ -642,7 +801,8 @@ function StackGame() {
               <div
                 className="pointer-events-none absolute left-1/2"
                 style={{
-                  width: GAME_WIDTH,
+                  width:
+                    GAME_WIDTH,
 
                   height:
                     blocks.length *
@@ -658,7 +818,10 @@ function StackGame() {
               >
 
                 {blocks.map(
-                  (block, index) => (
+                  (
+                    block,
+                    index
+                  ) => (
                     <div
                       key={index}
                       className="absolute rounded-lg bg-white shadow-[0_0_20px_rgba(255,255,255,0.12)]"
@@ -695,7 +858,11 @@ function StackGame() {
                     BLOCK_GAP,
 
                   left:
-                    `calc(50% - ${GAME_WIDTH / 2}px + ${currentBlock.x}px)`,
+                    `calc(50% - ${
+                      GAME_WIDTH / 2
+                    }px + ${
+                      currentBlock.x
+                    }px)`,
 
                   top: 32,
                 }}
@@ -718,10 +885,12 @@ function StackGame() {
             <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl">
 
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-white/10">
+
                 <Trophy
                   size={38}
                   strokeWidth={1.7}
                 />
+
               </div>
 
               <p className="text-sm text-zinc-500">
@@ -736,23 +905,148 @@ function StackGame() {
                 طبقه
               </p>
 
-              {isNewBest && (
-                <p className="mt-4 text-sm font-bold">
-                  رکورد جدید!
+              {/* Submitting */}
+              {isSubmitting && (
+                <p className="mt-5 text-sm text-zinc-500">
+                  در حال ثبت امتیاز...
                 </p>
               )}
 
-              <div className="mt-7 flex items-center justify-center gap-2 text-sm text-zinc-500">
-                <Trophy size={16} />
-                بهترین رکورد: {bestScore}
-              </div>
+              {/* Submit error */}
+              {submitError && (
+                <div className="mt-5 rounded-2xl bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                  {submitError}
+                </div>
+              )}
 
+              {/* New record */}
+              {!isSubmitting &&
+                scoreResult &&
+                isNewBest && (
+                  <p className="mt-4 text-sm font-bold">
+                    رکورد جدید!
+                  </p>
+                )}
+
+              {/* Online stats */}
+              {!isSubmitting &&
+                scoreResult && (
+                  <>
+
+                    <div className="mt-6 grid grid-cols-2 gap-2">
+
+                      <div className="rounded-2xl bg-white/5 p-3">
+
+                        <p className="text-xs text-zinc-500">
+                          رکورد شما
+                        </p>
+
+                        <p className="mt-1 text-lg font-black">
+                          {
+                            scoreResult.record
+                          }
+                        </p>
+
+                      </div>
+
+                      <div className="rounded-2xl bg-white/5 p-3">
+
+                        <p className="text-xs text-zinc-500">
+                          رتبه
+                        </p>
+
+                        <p className="mt-1 text-lg font-black">
+                          #
+                          {
+                            scoreResult.position
+                          }
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    {/* Leaderboard */}
+                    <div className="mt-5 text-right">
+
+                      <div className="mb-2 flex items-center justify-between">
+
+                        <p className="text-xs font-bold text-zinc-400">
+                          جدول امتیازات
+                        </p>
+
+                        <p className="text-xs text-zinc-600">
+                          برج‌سازی
+                        </p>
+
+                      </div>
+
+                      <div className="space-y-1.5">
+
+                        {scoreResult.players.map(
+                          (player) => (
+                            <div
+                              key={
+                                player.id
+                              }
+                              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${
+                                player.is_me
+                                  ? 'bg-white/10'
+                                  : 'bg-white/[0.025]'
+                              }`}
+                            >
+
+                              <div className="w-7 text-center text-xs font-bold text-zinc-500">
+                                #
+                                {
+                                  player.position
+                                }
+                              </div>
+
+                              <div className="min-w-0 flex-1 truncate text-sm font-medium">
+                                {
+                                  player.username
+                                }
+
+                                {player.is_me && (
+                                  <span className="mr-2 text-[10px] text-zinc-500">
+                                    شما
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="text-sm font-black">
+                                {
+                                  player.score
+                                }
+                              </div>
+
+                            </div>
+                          )
+                        )}
+
+                      </div>
+
+                    </div>
+
+                  </>
+                )}
+
+              {/* Retry */}
               <button
                 onClick={startGame}
-                className="mt-7 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 font-bold text-black"
+                disabled={
+                  isSubmitting
+                }
+                className="mt-7 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <RotateCcw size={18} />
+
+                <RotateCcw
+                  size={18}
+                />
+
                 دوباره بازی کن
+
               </button>
 
             </div>

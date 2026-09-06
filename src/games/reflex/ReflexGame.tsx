@@ -1,6 +1,31 @@
-
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Target, Trophy, RotateCcw, X } from 'lucide-react'
+import {
+  ArrowRight,
+  Target,
+  Trophy,
+  RotateCcw,
+  X,
+} from 'lucide-react'
+
+type LeaderboardPlayer = {
+  id: number
+  username: string
+  score: number
+  position: number
+  is_me: boolean
+}
+
+type ScoreResult = {
+  success: boolean
+  game: string
+  score: number
+  record: number
+  position: number
+  players: LeaderboardPlayer[]
+  message?: string
+}
+
+const DEVICE_TOKEN_KEY = 'reflex-games-device-token'
 
 function ReflexGame() {
   const [gameStarted, setGameStarted] = useState(false)
@@ -19,7 +44,14 @@ function ReflexGame() {
     'timeout' | 'miss' | null
   >(null)
 
-  // Sounds
+  const [scoreResult, setScoreResult] =
+    useState<ScoreResult | null>(null)
+
+  const [submittingScore, setSubmittingScore] =
+    useState(false)
+
+  const [scoreError, setScoreError] = useState('')
+
   const hitSound = useRef<HTMLAudioElement | null>(null)
   const gameOverSound = useRef<HTMLAudioElement | null>(null)
 
@@ -27,7 +59,14 @@ function ReflexGame() {
   const MIN_TARGET_SIZE = 32
   const SIZE_DECREASE = 2
 
-  // Create audio once
+  const apiUrl = import.meta.env.VITE_API_URL
+
+  /*
+  |--------------------------------------------------------------------------
+  | Audio
+  |--------------------------------------------------------------------------
+  */
+
   useEffect(() => {
     hitSound.current = new Audio('/sounds/hit.wav')
     hitSound.current.volume = 0.5
@@ -41,6 +80,12 @@ function ReflexGame() {
     }
   }, [])
 
+  /*
+  |--------------------------------------------------------------------------
+  | Game over sound
+  |--------------------------------------------------------------------------
+  */
+
   const playGameOverSound = () => {
     if (gameOverSound.current) {
       gameOverSound.current.currentTime = 0
@@ -53,10 +98,107 @@ function ReflexGame() {
     }
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Submit score
+  |--------------------------------------------------------------------------
+  */
+
+  const submitScore = async (finalScore: number) => {
+    try {
+      setSubmittingScore(true)
+      setScoreError('')
+      setScoreResult(null)
+
+      const deviceToken = localStorage.getItem(
+        DEVICE_TOKEN_KEY
+      )
+
+      if (!deviceToken) {
+        throw new Error(
+          'شناسه کاربر پیدا نشد.'
+        )
+      }
+
+      const response = await fetch(
+        `${apiUrl}/index.php?route=score`,
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json',
+          },
+
+          body: JSON.stringify({
+            game: 'reflex',
+            device_token: deviceToken,
+            score: finalScore,
+          }),
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message ||
+          'ثبت امتیاز ناموفق بود.'
+        )
+      }
+
+      setScoreResult(data)
+
+      // Backend is the source of truth
+      setBestScore(data.record)
+
+    } catch (error) {
+      console.error(
+        'Failed to submit score:',
+        error
+      )
+
+      setScoreError(
+        error instanceof Error
+          ? error.message
+          : 'خطایی هنگام ثبت امتیاز رخ داد.'
+      )
+    } finally {
+      setSubmittingScore(false)
+    }
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Finish game
+  |--------------------------------------------------------------------------
+  */
+
+  const finishGame = (
+    reason: 'timeout' | 'miss'
+  ) => {
+    setGameStarted(false)
+    setGameOverReason(reason)
+
+    playGameOverSound()
+
+    // Send final score to backend
+    submitScore(score)
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Start game
+  |--------------------------------------------------------------------------
+  */
+
   const startGame = () => {
     setScore(0)
     setTimeLeft(30)
     setGameOverReason(null)
+
+    setScoreResult(null)
+    setScoreError('')
+    setSubmittingScore(false)
 
     setTargetPosition({
       x: 50,
@@ -67,6 +209,12 @@ function ReflexGame() {
 
     setGameStarted(true)
   }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Timer
+  |--------------------------------------------------------------------------
+  */
 
   useEffect(() => {
     if (!gameStarted || timeLeft <= 0) {
@@ -80,25 +228,39 @@ function ReflexGame() {
     return () => clearInterval(timer)
   }, [gameStarted, timeLeft])
 
+  /*
+  |--------------------------------------------------------------------------
+  | Timeout
+  |--------------------------------------------------------------------------
+  */
+
   useEffect(() => {
     if (timeLeft === 0 && gameStarted) {
-      setGameStarted(false)
-      setGameOverReason('timeout')
-
-      playGameOverSound()
-
-      setBestScore((currentBest) =>
-        Math.max(currentBest, score)
-      )
+      finishGame('timeout')
     }
-  }, [timeLeft, gameStarted, score])
+  }, [timeLeft, gameStarted])
+
+  /*
+  |--------------------------------------------------------------------------
+  | Random target position
+  |--------------------------------------------------------------------------
+  */
 
   const getRandomPosition = () => {
     const x = 10 + Math.random() * 80
     const y = 10 + Math.random() * 80
 
-    return { x, y }
+    return {
+      x,
+      y,
+    }
   }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Hit target
+  |--------------------------------------------------------------------------
+  */
 
   const hitTarget = (
     event: React.MouseEvent<HTMLButtonElement>
@@ -109,7 +271,6 @@ function ReflexGame() {
       return
     }
 
-    // Play hit sound
     if (hitSound.current) {
       hitSound.current.currentTime = 0
 
@@ -124,10 +285,8 @@ function ReflexGame() {
 
     setScore(newScore)
 
-    // Move target
     setTargetPosition(getRandomPosition())
 
-    // Make target smaller
     setTargetSize((currentSize) =>
       Math.max(
         MIN_TARGET_SIZE,
@@ -136,23 +295,23 @@ function ReflexGame() {
     )
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Miss target
+  |--------------------------------------------------------------------------
+  */
+
   const missTarget = () => {
     if (!gameStarted || timeLeft <= 0) {
       return
     }
 
-    setGameStarted(false)
-    setGameOverReason('miss')
-
-    // Play game over sound
-    playGameOverSound()
-
-    setBestScore((currentBest) =>
-      Math.max(currentBest, score)
-    )
+    finishGame('miss')
   }
 
-  const isGameOver = !gameStarted && gameOverReason !== null
+  const isGameOver =
+    !gameStarted &&
+    gameOverReason !== null
 
   return (
     <main className="min-h-screen bg-[#08090D] text-white">
@@ -160,6 +319,7 @@ function ReflexGame() {
 
         {/* Header */}
         <header className="mb-5 flex items-center gap-3">
+
           <button
             onClick={() => window.history.back()}
             className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
@@ -168,6 +328,7 @@ function ReflexGame() {
           </button>
 
           <div>
+
             <h1 className="text-xl font-black sm:text-2xl">
               رفلکس
             </h1>
@@ -175,7 +336,9 @@ function ReflexGame() {
             <p className="text-xs text-zinc-500">
               سرعت و دقتت رو امتحان کن
             </p>
+
           </div>
+
         </header>
 
         {/* Start Screen */}
@@ -185,7 +348,10 @@ function ReflexGame() {
             <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 text-center shadow-2xl sm:p-9">
 
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-white/10">
-                <Target size={40} strokeWidth={1.7} />
+                <Target
+                  size={40}
+                  strokeWidth={1.7}
+                />
               </div>
 
               <h2 className="text-3xl font-black">
@@ -200,6 +366,7 @@ function ReflexGame() {
               <div className="mt-7 grid grid-cols-3 gap-2">
 
                 <div className="rounded-2xl bg-white/5 p-3">
+
                   <p className="text-xs text-zinc-500">
                     زمان
                   </p>
@@ -207,9 +374,11 @@ function ReflexGame() {
                   <p className="mt-1 font-bold">
                     ۳۰ ثانیه
                   </p>
+
                 </div>
 
                 <div className="rounded-2xl bg-white/5 p-3">
+
                   <p className="text-xs text-zinc-500">
                     هدف
                   </p>
@@ -217,9 +386,11 @@ function ReflexGame() {
                   <p className="mt-1 font-bold">
                     متحرک
                   </p>
+
                 </div>
 
                 <div className="rounded-2xl bg-white/5 p-3">
+
                   <p className="text-xs text-zinc-500">
                     اشتباه
                   </p>
@@ -227,6 +398,7 @@ function ReflexGame() {
                   <p className="mt-1 font-bold">
                     پایان بازی
                   </p>
+
                 </div>
 
               </div>
@@ -251,6 +423,7 @@ function ReflexGame() {
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center sm:p-4">
+
                 <p className="text-xs text-zinc-500">
                   امتیاز
                 </p>
@@ -258,9 +431,11 @@ function ReflexGame() {
                 <p className="mt-1 text-xl font-black sm:text-2xl">
                   {score}
                 </p>
+
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center sm:p-4">
+
                 <p className="text-xs text-zinc-500">
                   زمان
                 </p>
@@ -274,9 +449,11 @@ function ReflexGame() {
                 >
                   {timeLeft}
                 </p>
+
               </div>
 
               <div className="hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center sm:block sm:p-4">
+
                 <p className="text-xs text-zinc-500">
                   رکورد
                 </p>
@@ -284,6 +461,7 @@ function ReflexGame() {
                 <p className="mt-1 text-xl font-black sm:text-2xl">
                   {bestScore}
                 </p>
+
               </div>
 
             </div>
@@ -333,7 +511,10 @@ function ReflexGame() {
                 }}
               >
                 <Target
-                  size={Math.max(18, targetSize * 0.47)}
+                  size={Math.max(
+                    18,
+                    targetSize * 0.47
+                  )}
                   strokeWidth={2}
                 />
               </button>
@@ -354,6 +535,7 @@ function ReflexGame() {
 
             <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl">
 
+              {/* Icon */}
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-white/10">
 
                 {gameOverReason === 'miss' ? (
@@ -370,6 +552,7 @@ function ReflexGame() {
                   : 'زمان تمام شد'}
               </p>
 
+              {/* Score */}
               <h2 className="mt-2 text-6xl font-black">
                 {score}
               </h2>
@@ -378,23 +561,133 @@ function ReflexGame() {
                 امتیاز
               </p>
 
-              {score >= bestScore && score > 0 && (
-                <p className="mt-4 text-sm font-bold">
-                  رکورد جدید!
+              {/* Submitting */}
+              {submittingScore && (
+                <p className="mt-5 text-sm text-zinc-500">
+                  در حال ثبت امتیاز...
                 </p>
               )}
 
-              <div className="mt-7 flex items-center justify-center gap-2 text-sm text-zinc-500">
-                <Trophy size={16} />
-                بهترین رکورد: {bestScore}
-              </div>
+              {/* Error */}
+              {scoreError && (
+                <p className="mt-5 text-xs text-red-400">
+                  {scoreError}
+                </p>
+              )}
 
+              {/* New record */}
+              {!submittingScore &&
+                scoreResult &&
+                score === scoreResult.record &&
+                scoreResult.record > 0 && (
+                  <p className="mt-4 text-sm font-bold">
+                    رکورد جدید!
+                  </p>
+                )}
+
+              {/* Backend result */}
+              {scoreResult && (
+                <>
+
+                  {/* Personal record */}
+                  <div className="mt-7 flex items-center justify-center gap-2 text-sm text-zinc-500">
+
+                    <Trophy size={16} />
+
+                    بهترین رکورد: {scoreResult.record}
+
+                  </div>
+
+                  {/* Position */}
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+
+                    <p className="text-xs text-zinc-500">
+                      رتبه شما
+                    </p>
+
+                    <p className="mt-1 text-3xl font-black">
+                      #{scoreResult.position}
+                    </p>
+
+                  </div>
+
+                  {/* Leaderboard */}
+                  <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
+
+                    <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3 text-right">
+
+                      <p className="text-xs font-bold text-zinc-400">
+                        جدول امتیازات
+                      </p>
+
+                    </div>
+
+                    <div className="divide-y divide-white/5">
+
+                      {scoreResult.players.map(
+                        (player) => (
+                          <div
+                            key={player.id}
+                            className={`flex items-center gap-3 px-4 py-3 ${
+                              player.is_me
+                                ? 'bg-white/[0.08]'
+                                : ''
+                            }`}
+                          >
+
+                            <div className="w-8 text-center text-xs font-bold text-zinc-600">
+                              #{player.position}
+                            </div>
+
+                            <div className="min-w-0 flex-1 text-right">
+
+                              <p
+                                className={`truncate text-sm font-bold ${
+                                  player.is_me
+                                    ? 'text-white'
+                                    : 'text-zinc-300'
+                                }`}
+                              >
+                                {player.username}
+
+                                {player.is_me && (
+                                  <span className="mr-2 text-[10px] text-zinc-500">
+                                    شما
+                                  </span>
+                                )}
+
+                              </p>
+
+                            </div>
+
+                            <div className="text-sm font-black">
+                              {player.score}
+                            </div>
+
+                          </div>
+                        )
+                      )}
+
+                    </div>
+
+                  </div>
+
+                </>
+              )}
+
+              {/* Play again */}
               <button
                 onClick={startGame}
-                className="mt-7 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 font-bold text-black transition hover:scale-[1.02] active:scale-[0.98]"
+                disabled={submittingScore}
+                className="mt-7 flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 font-bold text-black transition hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
+
                 <RotateCcw size={18} />
-                دوباره بازی کن
+
+                {submittingScore
+                  ? 'در حال ثبت...'
+                  : 'دوباره بازی کن'}
+
               </button>
 
             </div>
@@ -408,4 +701,3 @@ function ReflexGame() {
 }
 
 export default ReflexGame
-
