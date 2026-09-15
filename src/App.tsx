@@ -10,10 +10,12 @@ import Game2048 from './games/2048/Game2048'
 import Snake from './games/snake/Snake'
 import GlobalButtonSound from './components/GlobalButtonSound'
 import Tetris from './games/tetris/Tetris'
+import NetworkHandler from './components/NetworkHandler'
 
 function App() {
   return (
     <BrowserRouter>
+      <NetworkHandler />
       <GlobalButtonSound />
 
       <Routes>
