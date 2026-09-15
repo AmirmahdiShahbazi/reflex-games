@@ -493,12 +493,12 @@ function Home() {
                     حمایت از تیم نورویکس (Nurvix)
                   </h3>
                   <p className="mt-1 max-w-xl text-xs leading-6 text-zinc-400 sm:text-sm">
-                    این بازی‌ها توسط تیم <strong>نورویکس</strong> کاملاً رایگان و بدون تبلیغات تولید شده‌اند. با حمایت مالی در دارامت به رشد بازی‌ها و ارتقای سرورها کمک کنید.
+                    این بازی‌ها توسط تیم <strong>نورویکس</strong> کاملاً رایگان و بدون تبلیغات تولید شده‌اند. با حمایت مالی به رشد بازی‌ها و ارتقای سرورها کمک کنید.
                   </p>
                 </div>
               </div>
 
-              {/* دکمه دونیت دارامت */}
+              {/* دکمه دونیت  */}
               <a
                 href={DONATION_URL}
                 target="_blank"
@@ -506,7 +506,7 @@ function Home() {
                 className="flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/20 px-6 py-3.5 text-xs font-black text-rose-300 shadow-lg transition hover:bg-rose-500 hover:text-white sm:w-auto"
               >
                 <Heart size={16} className="fill-current" />
-                حمایت در دارامت
+                حمایت مالی              
                 <ExternalLink size={14} />
               </a>
             </div>
@@ -545,7 +545,7 @@ function Home() {
             </p>
 
             <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-2.5 text-xs text-zinc-500">
-              <AlertCircle size={15} className="text-amber-400 shrink-0" />
+              <AlertCircle siتze={15} className="text-amber-400 shrink-0" />
               <span>ارتباط با شبکه اینترنت قطع شده است</span>
             </div>
 
